@@ -7,24 +7,54 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="top">
-    <h1>סרטונים מאושרים</h1>
-    <input id="search" type="search" placeholder="חיפוש לפי כותרת…" aria-label="חיפוש">
+  <header class="topbar">
+    <a class="brand" href="#/" aria-label="דף הבית">
+      <span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M8 5v14l11-7z"/></svg></span>
+      <span class="brand-name">סרטונים מאושרים</span>
+    </a>
+
+    <form class="search" id="searchForm" role="search">
+      <input id="search" type="search" placeholder="חיפוש" aria-label="חיפוש" autocomplete="off">
+      <button type="submit" aria-label="חיפוש">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"/></svg>
+      </button>
+    </form>
+
+    <button id="theme" class="icon-btn" type="button" aria-label="מעבר בין מצב כהה לבהיר">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.39 5.39 0 0 1-4.4 2.26 5.4 5.4 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1"/></svg>
+    </button>
   </header>
 
   <main>
     <p id="notice" class="notice" hidden>לא הוגדרה תמונת חסימה ב-config.js, ולכן לא מתבצע סינון חסימות. ראו calibrate.html.</p>
-    <p id="status" class="status">בודק סרטונים…</p>
-    <section id="grid" class="grid" aria-live="polite"></section>
-  </main>
 
-  <div id="modal" class="modal" hidden>
-    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-      <button id="close" class="close" aria-label="סגירה">×</button>
-      <div class="player"><iframe id="player" title="נגן" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>
-      <h2 id="modal-title"></h2>
-    </div>
-  </div>
+    <section id="home">
+      <p id="status" class="status" hidden></p>
+      <div id="grid" class="grid" aria-live="polite"></div>
+    </section>
+
+    <section id="watch" class="off">
+      <div class="watch-main">
+        <div id="player" class="player">
+          <iframe id="frame" title="נגן" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
+          <div class="mini-bar">
+            <button id="miniExpand" type="button" aria-label="הרחבה">
+              <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2v-7h-2zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3z"/></svg>
+            </button>
+            <button id="miniClose" type="button" aria-label="סגירה">
+              <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            </button>
+          </div>
+        </div>
+        <h1 id="wtitle" class="wtitle"></h1>
+        <div class="actions">
+          <button id="btnMini" class="btn" type="button">מזעור הנגן</button>
+          <button id="btnCopy" class="btn" type="button">העתקת קישור</button>
+        </div>
+      </div>
+      <aside id="side" class="side" aria-label="סרטונים נוספים"></aside>
+    </section>
+  </main>
 
   <script src="config.js"></script>
   <script src="app.js"></script>
