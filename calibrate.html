@@ -3,42 +3,99 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>כיול תמונת חסימה</title>
+  <title>בדיקת חסימה</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    main { max-width: 720px; margin: 24px auto; padding: 0 16px; }
+    textarea { width: 100%; min-height: 110px; padding: 10px; font-size: 1rem; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 10px; }
+    .warn { background: var(--notice-bg); color: var(--notice-text); border-radius: 12px; padding: 10px 14px; margin: 12px 0; }
+    pre { white-space: pre-wrap; background: var(--bg2); border-radius: 12px; padding: 12px; line-height: 1.7; text-align: right; }
+  </style>
 </head>
 <body>
-  <main style="max-width:640px;margin:24px auto;padding:0 16px">
-    <h1>כיול תמונת חסימה</h1>
-    <p>פתחו את הדף הזה ממחשב או טלפון שעובר דרך המסנן. הדביקו מזהה (או קישור) של סרטון שאתם יודעים שהמסנן חוסם.</p>
-    <input id="vid" type="text" dir="ltr" placeholder="קישור או מזהה של סרטון חסום" style="width:100%;padding:10px;font-size:1rem">
-    <p><button id="go" class="btn" style="padding:0 18px">בדיקה</button></p>
-    <div id="out"></div>
+  <main>
+    <h1>בדיקת חסימה</h1>
+    <p>הדף בודק, מתוך הדפדפן שלכם (כלומר מאחורי המסנן), מה האתר רואה בכל סרטון. הדביקו סרטון שנחסם אצלכם וסרטון פתוח, אחד בכל שורה (קישור או מזהה).</p>
+    <div id="fileWarn" class="warn" hidden>הדף נפתח כקובץ מהמחשב ולכן הבדיקה לא תעבוד. פתחו אותו מכתובת האתר בגיטהאב (https://…github.io/…/calibrate.html).</div>
+    <textarea id="ids" dir="ltr" placeholder="https://www.youtube.com/watch?v=...&#10;https://youtu.be/..."></textarea>
+    <p><button id="go" class="btn" type="button" style="padding:0 18px">בדיקה</button>
+       <button id="copy" class="btn" type="button" style="padding:0 18px" hidden>העתקת התוצאות</button></p>
+    <pre id="out" hidden></pre>
   </main>
   <script>
-    const out = document.getElementById("out");
-    document.getElementById("go").onclick = () => {
-      const m = document.getElementById("vid").value.match(/(?:v=|youtu\.be\/|\/embed\/|\/shorts\/)([A-Za-z0-9_-]{11})|^\s*([A-Za-z0-9_-]{11})\s*$/);
-      const id = m && (m[1] || m[2]);
-      if (!id) { out.textContent = "לא זוהה מזהה סרטון"; return; }
-      const img = new Image();
+    const ID_RE = /(?:v=|youtu\.be\/|\/embed\/|\/shorts\/|\/live\/)([A-Za-z0-9_-]{11})|^\s*([A-Za-z0-9_-]{11})\s*$/;
+    const $ = id => document.getElementById(id);
+    $("fileWarn").hidden = location.protocol !== "file:";
+
+    function parseIds(text) {
+      const ids = [];
+      for (const line of text.split("\n")) {
+        const m = line.match(ID_RE), id = m && (m[1] || m[2]);
+        if (id && !ids.includes(id)) ids.push(id);
+      }
+      return ids;
+    }
+
+    function load(url) {
+      return new Promise(resolve => {
+        const img = new Image();
+        const t = setTimeout(() => resolve({ err: "הזמן עבר" }), 12000);
+        img.onload = () => { clearTimeout(t); resolve({ w: img.naturalWidth, h: img.naturalHeight }); };
+        img.onerror = () => { clearTimeout(t); resolve({ err: "לא נטענה" }); };
+        img.src = url;
+      });
+    }
+    const size = r => r.err ? r.err : `${r.w}×${r.h}`;
+
+    async function corsInfo(url) {
+      try {
+        const r = await fetch(url, { mode: "cors" });
+        const buf = await r.arrayBuffer();
+        let hash = "";
+        try {
+          const d = await crypto.subtle.digest("SHA-256", buf);
+          hash = ", hash " + [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, "0")).join("").slice(0, 16);
+        } catch (e) {}
+        return `אפשרית (status ${r.status}, ${buf.byteLength} בייט${hash})`;
+      } catch (e) {
+        return "לא אפשרית";
+      }
+    }
+
+    $("go").onclick = async () => {
+      const ids = parseIds($("ids").value);
+      const out = $("out");
+      out.hidden = false;
+      $("copy").hidden = true;
+      if (!ids.length) { out.textContent = "לא זוהה מזהה סרטון"; return; }
       out.textContent = "בודק…";
-      img.onload = () => {
-        const w = img.naturalWidth, h = img.naturalHeight;
-        out.replaceChildren();
-        const p = document.createElement("p");
-        p.textContent = `מידות התמונה שהתקבלה: ${w} × ${h}`;
-        const code = document.createElement("pre");
-        code.dir = "ltr";
-        code.textContent = `BLOCK_SIZES: [[${w}, ${h}]],`;
-        const note = document.createElement("p");
-        note.textContent = (w === 480 && h === 360)
-          ? "המידות זהות לתמונה רגילה של יוטיוב (480×360), לכן אי אפשר להבחין ביניהן לפי מידות בלבד. כדאי לבדוק גם סרטון רגיל ולהשוות."
-          : "הדביקו את השורה לעיל בקובץ config.js.";
-        out.append(p, code, note, img);
-        img.style.maxWidth = "100%";
-      };
-      img.onerror = () => { out.textContent = "התמונה לא נטענה (ייתכן שהמסנן חוסם אותה לגמרי). נסו סרטון חסום אחר."; };
-      img.src = window.location.protocol + "//i.ytimg.com/vi/" + id + "/hqdefault.jpg";
+      const lines = [];
+      for (const id of ids) {
+        const base = `https://i.ytimg.com/vi/${id}/`;
+        const [hq, mq] = await Promise.all([load(base + "hqdefault.jpg"), load(base + "mqdefault.jpg")]);
+        const cors = await corsInfo(base + "hqdefault.jpg");
+        let verdict;
+        if (hq.err || mq.err) verdict = "יוסתר באתר: אחת התמונות לא נטענה";
+        else if (hq.w === mq.w && hq.h === mq.h) verdict = "יוסתר באתר: אותה תמונה בכל הגדלים (נראה כתמונת חסימה)";
+        else verdict = "יוצג באתר: נראה כסרטון רגיל";
+        lines.push(
+          `סרטון ${id}`,
+          `  תמונה גדולה: ${size(hq)}`,
+          `  תמונה קטנה: ${size(mq)}`,
+          `  קריאת תוכן התמונה: ${cors}`,
+          `  תוצאה: ${verdict}`,
+          ""
+        );
+      }
+      out.textContent = lines.join("\n");
+      $("copy").hidden = false;
+    };
+
+    $("copy").onclick = async e => {
+      const btn = e.currentTarget, old = btn.textContent;
+      try { await navigator.clipboard.writeText($("out").textContent); btn.textContent = "הועתק"; }
+      catch (err) { btn.textContent = "סמנו והעתיקו ידנית"; }
+      setTimeout(() => { btn.textContent = old; }, 1500);
     };
   </script>
 </body>
