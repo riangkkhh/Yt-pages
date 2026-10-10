@@ -6,25 +6,28 @@
   <title>בדיקת חסימה</title>
   <link rel="stylesheet" href="style.css">
   <style>
-    main { max-width: 720px; margin: 24px auto; padding: 0 16px; }
+    main { max-width: 760px; margin: 24px auto; padding: 0 16px; }
     textarea { width: 100%; min-height: 110px; padding: 10px; font-size: 1rem; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 10px; }
     .warn { background: var(--notice-bg); color: var(--notice-text); border-radius: 12px; padding: 10px 14px; margin: 12px 0; }
     pre { white-space: pre-wrap; background: var(--bg2); border-radius: 12px; padding: 12px; line-height: 1.7; text-align: right; }
+    #probe { position: fixed; left: -2000px; top: 0; width: 320px; height: 180px; }
   </style>
 </head>
 <body>
   <main>
     <h1>בדיקת חסימה</h1>
-    <p>הדף בודק, מתוך הדפדפן שלכם (כלומר מאחורי המסנן), מה האתר רואה בכל סרטון. הדביקו סרטון שנחסם אצלכם וסרטון פתוח, אחד בכל שורה (קישור או מזהה).</p>
+    <p>הדף בודק, מתוך הדפדפן שלכם (כלומר מאחורי המסנן), במה סרטון חסום שונה מסרטון פתוח. הדביקו סרטון שנחסם אצלכם וסרטון פתוח, אחד בכל שורה (קישור או מזהה). הבדיקה לוקחת כחצי דקה לכל סרטון.</p>
     <div id="fileWarn" class="warn" hidden>הדף נפתח כקובץ מהמחשב ולכן הבדיקה לא תעבוד. פתחו אותו מכתובת האתר בגיטהאב (https://…github.io/…/calibrate.html).</div>
     <textarea id="ids" dir="ltr" placeholder="https://www.youtube.com/watch?v=...&#10;https://youtu.be/..."></textarea>
     <p><button id="go" class="btn" type="button" style="padding:0 18px">בדיקה</button>
        <button id="copy" class="btn" type="button" style="padding:0 18px" hidden>העתקת התוצאות</button></p>
     <pre id="out" hidden></pre>
+    <div id="probe" aria-hidden="true"></div>
   </main>
   <script>
     const ID_RE = /(?:v=|youtu\.be\/|\/embed\/|\/shorts\/|\/live\/)([A-Za-z0-9_-]{11})|^\s*([A-Za-z0-9_-]{11})\s*$/;
     const $ = id => document.getElementById(id);
+    const ms = t0 => Math.round(performance.now() - t0) + "ms";
     $("fileWarn").hidden = location.protocol !== "file:";
 
     function parseIds(text) {
@@ -36,30 +39,91 @@
       return ids;
     }
 
-    function load(url) {
+    function loadImg(url) {
       return new Promise(resolve => {
         const img = new Image();
-        const t = setTimeout(() => resolve({ err: "הזמן עבר" }), 12000);
-        img.onload = () => { clearTimeout(t); resolve({ w: img.naturalWidth, h: img.naturalHeight }); };
-        img.onerror = () => { clearTimeout(t); resolve({ err: "לא נטענה" }); };
+        const t = setTimeout(() => resolve("הזמן עבר"), 12000);
+        img.onload = () => { clearTimeout(t); resolve(`${img.naturalWidth}×${img.naturalHeight}`); };
+        img.onerror = () => { clearTimeout(t); resolve("לא נטענה"); };
         img.src = url;
       });
     }
-    const size = r => r.err ? r.err : `${r.w}×${r.h}`;
 
-    async function corsInfo(url) {
+    async function oembed(id) {
+      const t0 = performance.now();
       try {
-        const r = await fetch(url, { mode: "cors" });
-        const buf = await r.arrayBuffer();
-        let hash = "";
-        try {
-          const d = await crypto.subtle.digest("SHA-256", buf);
-          hash = ", hash " + [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, "0")).join("").slice(0, 16);
-        } catch (e) {}
-        return `אפשרית (status ${r.status}, ${buf.byteLength} בייט${hash})`;
+        const r = await fetch(`https://www.youtube.com/oembed?format=json&url=https://www.youtube.com/watch?v=${id}`, { mode: "cors" });
+        let extra = "";
+        try { const j = await r.json(); extra = ` כותרת="${j.title || ""}"`; } catch (e) { extra = " (לא JSON)"; }
+        return `סטטוס ${r.status}${extra} (${ms(t0)})`;
       } catch (e) {
-        return "לא אפשרית";
+        return `נכשל, חסימה או CORS (${ms(t0)})`;
       }
+    }
+
+    // redirect:"manual" exposes "opaqueredirect" when the server (or filter) redirects to a block page
+    async function fetchType(url) {
+      const t0 = performance.now();
+      try {
+        const r = await fetch(url, { mode: "no-cors", redirect: "manual", cache: "no-store" });
+        return `${r.type} (${ms(t0)})`;
+      } catch (e) {
+        return `נכשל (${ms(t0)})`;
+      }
+    }
+
+    let ytLoading;
+    function loadYT() {
+      if (ytLoading) return ytLoading;
+      ytLoading = new Promise((resolve, reject) => {
+        if (window.YT && window.YT.Player) return resolve();
+        const s = document.createElement("script");
+        s.src = "https://www.youtube.com/iframe_api";
+        s.onerror = () => reject(new Error("script"));
+        window.onYouTubeIframeAPIReady = () => resolve();
+        document.head.append(s);
+        setTimeout(() => reject(new Error("timeout")), 10000);
+      });
+      return ytLoading;
+    }
+
+    async function probePlayer(id, host) {
+      try { await loadYT(); } catch (e) { return "ספריית הנגן של יוטיוב לא נטענה"; }
+      return new Promise(resolve => {
+        const div = document.createElement("div");
+        $("probe").append(div);
+        const events = [];
+        const t0 = performance.now();
+        let done = false, player, timer;
+        const finish = msg => {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          try { player.destroy(); } catch (e) {}
+          div.remove();
+          resolve(msg);
+        };
+        timer = setTimeout(() => finish(`לא הגיב תוך 10 שניות (אירועים: ${events.join(", ") || "אין"})`), 10000);
+        try {
+          player = new YT.Player(div, {
+            videoId: id, host, width: 320, height: 180, playerVars: { playsinline: 1 },
+            events: {
+              onReady: () => {
+                events.push("ready " + ms(t0));
+                setTimeout(() => {
+                  let title = "", dur = "";
+                  try { title = (player.getVideoData() || {}).title || ""; dur = Math.round(player.getDuration()); } catch (e) {}
+                  finish(`${events.join(", ")}; כותרת="${title}" משך=${dur}`);
+                }, 2500);
+              },
+              onError: e => { events.push(`error ${e.data} ${ms(t0)}`); setTimeout(() => finish(events.join(", ")), 400); },
+              onStateChange: e => events.push("state " + e.data),
+            },
+          });
+        } catch (e) {
+          finish("שגיאה ביצירת הנגן");
+        }
+      });
     }
 
     $("go").onclick = async () => {
@@ -68,22 +132,28 @@
       out.hidden = false;
       $("copy").hidden = true;
       if (!ids.length) { out.textContent = "לא זוהה מזהה סרטון"; return; }
-      out.textContent = "בודק…";
       const lines = [];
       for (const id of ids) {
+        out.textContent = lines.join("\n") + `\nבודק ${id}…`;
         const base = `https://i.ytimg.com/vi/${id}/`;
-        const [hq, mq] = await Promise.all([load(base + "hqdefault.jpg"), load(base + "mqdefault.jpg")]);
-        const cors = await corsInfo(base + "hqdefault.jpg");
-        let verdict;
-        if (hq.err || mq.err) verdict = "יוסתר באתר: אחת התמונות לא נטענה";
-        else if (hq.w === mq.w && hq.h === mq.h) verdict = "יוסתר באתר: אותה תמונה בכל הגדלים (נראה כתמונת חסימה)";
-        else verdict = "יוצג באתר: נראה כסרטון רגיל";
+        const [hq, mq] = await Promise.all([loadImg(base + "hqdefault.jpg"), loadImg(base + "mqdefault.jpg")]);
+        const [oe, watch, embed, embedNc] = await Promise.all([
+          oembed(id),
+          fetchType(`https://www.youtube.com/watch?v=${id}`),
+          fetchType(`https://www.youtube.com/embed/${id}`),
+          fetchType(`https://www.youtube-nocookie.com/embed/${id}`),
+        ]);
+        const p1 = await probePlayer(id, "https://www.youtube.com");
+        const p2 = await probePlayer(id, "https://www.youtube-nocookie.com");
         lines.push(
           `סרטון ${id}`,
-          `  תמונה גדולה: ${size(hq)}`,
-          `  תמונה קטנה: ${size(mq)}`,
-          `  קריאת תוכן התמונה: ${cors}`,
-          `  תוצאה: ${verdict}`,
+          `  תמונות: גדולה ${hq}, קטנה ${mq}`,
+          `  oEmbed: ${oe}`,
+          `  דף צפייה: ${watch}`,
+          `  embed ב-youtube.com: ${embed}`,
+          `  embed ב-nocookie: ${embedNc}`,
+          `  נגן youtube.com: ${p1}`,
+          `  נגן nocookie: ${p2}`,
           ""
         );
       }
