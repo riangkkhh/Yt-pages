@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מחץ קישורי יוטיוב מפורום פרוג</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts - Assistant for Hebrew -->
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Assistant', sans-serif;
+            background-color: #f8fafc;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col text-slate-800">
+
+    <header class="bg-indigo-900 text-white shadow-lg py-6 px-4 sm:px-8">
+        <div class="max-w-4xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-red-600 p-3 rounded-2xl flex items-center justify-center shadow-md">
+                    <i class="fa-brands fa-youtube text-2xl text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-wide">מחץ קישורי YouTube</h1>
+                    <p class="text-xs text-indigo-200">מתוך אשכולות ונושאים בפורום פרוג</p>
+                </div>
+            </div>
+            <span class="bg-indigo-800/80 text-indigo-200 text-xs px-3 py-1.5 rounded-full border border-indigo-700/50">
+                <i class="fa-solid fa-bolt text-amber-400 ml-1"></i> כלי חילוץ מהיר
+            </span>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 space-y-6">
+        
+        <!-- Input Card -->
+        <section class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80">
+            <h2 class="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2">
+                <i class="fa-solid fa-link text-indigo-600"></i>
+                הזנת קישור לאשכול בפרוג
+            </h2>
+            <p class="text-sm text-slate-500 mb-4">
+                הדבק את הקישור לעמוד האשכול שברצונך לסרוק. המערכת תחלץ עד 500 קישורי YouTube ייחודיים.
+            </p>
+
+            <form id="extractForm" onsubmit="handleExtract(event)" class="space-y-4">
+                <div class="relative">
+                    <input 
+                        type="url" 
+                        id="progUrl" 
+                        required
+                        placeholder="https://www.prog.co.il/threads/..."
+                        class="w-full pl-4 pr-11 py-3.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-800 placeholder-slate-400 transition-all text-sm sm:text-base dir-ltr text-right"
+                    >
+                    <div class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-globe"></i>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <button 
+                        type="submit" 
+                        id="submitBtn"
+                        class="flex-1 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+                    >
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <span>חלץ קישורים</span>
+                    </button>
+                    <button 
+                        type="button" 
+                        onclick="clearForm()"
+                        class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium py-3 px-5 rounded-xl transition-all flex items-center justify-center gap-2"
+                    >
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span>איפוס</span>
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Error Message Alert -->
+        <div id="errorAlert" class="hidden bg-rose-50 border-r-4 border-rose-500 p-4 rounded-xl shadow-sm text-rose-800">
+            <div class="flex items-start gap-3">
+                <i class="fa-solid fa-circle-exclamation text-xl text-rose-500 mt-0.5"></i>
+                <div class="flex-1">
+                    <h3 class="font-bold text-sm" id="errorTitle">שגיאה בחילוץ הנתונים</h3>
+                    <p class="text-xs mt-1 leading-relaxed" id="errorMessage"></p>
+                </div>
+                <button onclick="hideError()" class="text-rose-400 hover:text-rose-600">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="hidden bg-white rounded-2xl p-8 text-center border border-slate-200 shadow-sm space-y-4">
+            <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-indigo-600 border-t-transparent"></div>
+            <p class="text-slate-600 font-medium" id="loadingText">טוען את תוכן הדף מפורום פרוג...</p>
+            <p class="text-xs text-slate-400">תהליך זה עשוי לקחת מספר שניות בהתאם לתגובת השרת</p>
+        </div>
+
+        <!-- Results Section -->
+        <section id="resultsSection" class="hidden bg-white rounded-2xl p-6 shadow-sm border border-slate-200 space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-brands fa-youtube text-red-600"></i>
+                        תוצאות חילוץ
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5" id="statsCount">נמצאו 0 קישורים ייחודיים</p>
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                    <button 
+                        onclick="copyAllLinks()" 
+                        class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2"
+                    >
+                        <i class="fa-regular fa-copy"></i>
+                        <span>העתק הכל</span>
+                    </button>
+                    <button 
+                        onclick="downloadTxt()" 
+                        class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-medium px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2"
+                    >
+                        <i class="fa-solid fa-download"></i>
+                        <span>הורד קובץ TXT</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Links List -->
+            <div id="linksList" class="space-y-2 max-h-[450px] overflow-y-auto pr-1">
+                <!-- Links will be dynamically populated here -->
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-white border-t border-slate-200 py-4 px-4 text-center text-xs text-slate-400">
+        כלים דיגיטליים לשואבי מידע • מיועד לחילוץ קישורים מפורום פרוג
+    </footer>
+
+    <script>
+        // Store retrieved links
+        let extractedLinks = [];
+        const MAX_LINKS = 500;
+
+        // List of CORS proxies to try if direct fetch fails
+        const PROXIES = [
+            url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+            url => `https://corsproxy.io/?${encodeURIComponent(url)}`
+        ];
+
+        async function handleExtract(event) {
+            event.preventDefault();
+            hideError();
+            
+            const inputUrl = document.getElementById('progUrl').value.trim();
+            
+            // Validate URL format
+            if (!inputUrl || !inputUrl.toLowerCase().includes('prog.co.il')) {
+                showError('כתובת לא תקינה', 'יש להזין קישור תקין לאתר פרוג (prog.co.il).');
+                return;
+            }
+
+            // Show Loading State
+            showLoading(true);
+            setLoadingText('טוען תוכן מהפורום...');
+
+            try {
+                let htmlContent = null;
+                let fetchSuccess = false;
+
+                // Try proxies in sequence
+                for (let i = 0; i < PROXIES.length; i++) {
+                    try {
+                        const proxyUrl = PROXIES[i](inputUrl);
+                        setLoadingText(`טוען נתונים (ניסיון ${i + 1})...`);
+                        
+                        const response = await fetch(proxyUrl);
+                        if (response.ok) {
+                            htmlContent = await response.text();
+                            if (htmlContent && htmlContent.length > 100) {
+                                fetchSuccess = true;
+                                break;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn(`Proxy ${i + 1} failed:`, e);
+                    }
+                }
+
+                if (!fetchSuccess || !htmlContent) {
+                    throw new Error('לא ניתן היה לטעון את העמוד. ייתכן שהגישה לפרוג חסומה או שהאשכול פרטי.');
+                }
+
+                // Extract YouTube URLs
+                setLoadingText('מחלץ קישורי YouTube ומסנן כפילויות...');
+                extractedLinks = parseYouTubeLinks(htmlContent);
+
+                if (extractedLinks.length === 0) {
+                    showError('לא נמצאו קישורים', 'לא נמצאו קישורי YouTube באשכול זה.');
+                    document.getElementById('resultsSection').classList.add('hidden');
+                } else {
+                    renderResults();
+                }
+
+            } catch (err) {
+                showError('שגיאה בתקשורת / חסימה', err.message || 'אירעה שגיאה בעת ניסיון שליפת המידע מהקישור.');
+                document.getElementById('resultsSection').classList.add('hidden');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Regex parsing to catch YouTube URLs in various formats
+        function parseYouTubeLinks(htmlText) {
+            // Regex for matching various YouTube URL patterns
+            const ytRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/gi;
+            
+            const uniqueIds = new Set();
+            const links = [];
+
+            let match;
+            while ((match = ytRegex.exec(htmlText)) !== null) {
+                const videoId = match[1];
+                if (videoId && !uniqueIds.has(videoId)) {
+                    uniqueIds.add(videoId);
+                    links.push(`https://www.youtube.com/watch?v=${videoId}`);
+
+                    if (links.length >= MAX_LINKS) {
+                        break; // Cap at max limit
+                    }
+                }
+            }
+
+            return links;
+        }
+
+        function renderResults() {
+            const listEl = document.getElementById('linksList');
+            const countEl = document.getElementById('statsCount');
+            const resultsSec = document.getElementById('resultsSection');
+
+            listEl.innerHTML = '';
+            countEl.textContent = `נמצאו ${extractedLinks.length} קישורים ייחודיים${extractedLinks.length >= MAX_LINKS ? ' (הוגבל ל-500)' : ''}`;
+
+            extractedLinks.forEach((link, idx) => {
+                const item = document.createElement('div');
+                item.className = "flex items-center justify-between p-3 bg-slate-50 hover:bg-indigo-50/50 rounded-xl border border-slate-200/60 transition-all text-xs sm:text-sm";
+                item.innerHTML = `
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <span class="text-xs font-bold text-slate-400 min-w-[24px]">${idx + 1}.</span>
+                        <a href="${link}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:text-indigo-800 font-medium truncate dir-ltr text-right">
+                            ${link}
+                        </a>
+                    </div>
+                    <button onclick="copySingleLink('${link}', this)" class="text-slate-400 hover:text-indigo-600 px-2 py-1 rounded transition-colors" title="העתק קישור">
+                        <i class="fa-regular fa-copy"></i>
+                    </button>
+                `;
+                listEl.appendChild(item);
+            });
+
+            resultsSec.classList.remove('hidden');
+        }
+
+        function copyAllLinks() {
+            if (!extractedLinks.length) return;
+            const textToCopy = extractedLinks.join('\n');
+            
+            copyToClipboard(textToCopy);
+            showToast('כל הקישורים הועתקו ללוח!');
+        }
+
+        function copySingleLink(link, btn) {
+            copyToClipboard(link);
+            const originalIcon = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check text-emerald-600"></i>';
+            setTimeout(() => {
+                btn.innerHTML = originalIcon;
+            }, 1500);
+        }
+
+        function copyToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+        }
+
+        function downloadTxt() {
+            if (!extractedLinks.length) return;
+            
+            const content = extractedLinks.join('\n');
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `youtube_links_${new Date().toISOString().slice(0, 10)}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function clearForm() {
+            document.getElementById('progUrl').value = '';
+            document.getElementById('resultsSection').classList.add('hidden');
+            hideError();
+            extractedLinks = [];
+        }
+
+        function showLoading(show) {
+            const loading = document.getElementById('loadingState');
+            const submitBtn = document.getElementById('submitBtn');
+            if (show) {
+                loading.classList.remove('hidden');
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                loading.classList.add('hidden');
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        function setLoadingText(msg) {
+            document.getElementById('loadingText').textContent = msg;
+        }
+
+        function showError(title, message) {
+            document.getElementById('errorTitle').textContent = title;
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorAlert').classList.remove('hidden');
+        }
+
+        function hideError() {
+            document.getElementById('errorAlert').classList.add('hidden');
+        }
+
+        function showToast(msg) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-5 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs sm:text-sm py-2 px-4 rounded-full shadow-lg z-50 transition-all transform duration-300';
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => document.body.removeChild(toast), 300);
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
