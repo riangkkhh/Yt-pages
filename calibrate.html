@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>כיול תמונת חסימה</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main style="max-width:640px;margin:24px auto">
+    <h1>כיול תמונת חסימה</h1>
+    <p>פתחו את הדף הזה ממחשב או טלפון שעובר דרך המסנן. הדביקו מזהה (או קישור) של סרטון שאתם יודעים שהמסנן חוסם.</p>
+    <input id="vid" type="text" dir="ltr" placeholder="קישור או מזהה של סרטון חסום" style="width:100%;padding:10px;font-size:1rem">
+    <p><button id="go" class="card" style="padding:10px 18px;cursor:pointer">בדיקה</button></p>
+    <div id="out"></div>
+  </main>
+  <script>
+    const out = document.getElementById("out");
+    document.getElementById("go").onclick = () => {
+      const m = document.getElementById("vid").value.match(/(?:v=|youtu\.be\/|\/embed\/|\/shorts\/)([A-Za-z0-9_-]{11})|^\s*([A-Za-z0-9_-]{11})\s*$/);
+      const id = m && (m[1] || m[2]);
+      if (!id) { out.textContent = "לא זוהה מזהה סרטון"; return; }
+      const img = new Image();
+      out.textContent = "בודק…";
+      img.onload = () => {
+        const w = img.naturalWidth, h = img.naturalHeight;
+        out.replaceChildren();
+        const p = document.createElement("p");
+        p.textContent = `מידות התמונה שהתקבלה: ${w} × ${h}`;
+        const code = document.createElement("pre");
+        code.dir = "ltr";
+        code.textContent = `BLOCK_SIZES: [[${w}, ${h}]],`;
+        const note = document.createElement("p");
+        note.textContent = (w === 480 && h === 360)
+          ? "המידות זהות לתמונה רגילה של יוטיוב (480×360), לכן אי אפשר להבחין ביניהן לפי מידות בלבד. כדאי לבדוק גם סרטון רגיל ולהשוות."
+          : "הדביקו את השורה לעיל בקובץ config.js.";
+        out.append(p, code, note, img);
+        img.style.maxWidth = "100%";
+      };
+      img.onerror = () => { out.textContent = "התמונה לא נטענה (ייתכן שהמסנן חוסם אותה לגמרי). נסו סרטון חסום אחר."; };
+      img.src = window.location.protocol + "//i.ytimg.com/vi/" + id + "/hqdefault.jpg";
+    };
+  </script>
+</body>
+</html>

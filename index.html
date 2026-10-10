@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>סרטונים מאושרים</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <h1>סרטונים מאושרים</h1>
+    <input id="search" type="search" placeholder="חיפוש לפי כותרת…" aria-label="חיפוש">
+  </header>
+
+  <main>
+    <p id="notice" class="notice" hidden>לא הוגדרה תמונת חסימה ב-config.js, ולכן לא מתבצע סינון חסימות. ראו calibrate.html.</p>
+    <p id="status" class="status">בודק סרטונים…</p>
+    <section id="grid" class="grid" aria-live="polite"></section>
+  </main>
+
+  <div id="modal" class="modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <button id="close" class="close" aria-label="סגירה">×</button>
+      <div class="player"><iframe id="player" title="נגן" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>
+      <h2 id="modal-title"></h2>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
