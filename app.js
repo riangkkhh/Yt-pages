@@ -10,8 +10,6 @@
   let loaded = false;
   let current = null;  // id of the video loaded in the player (playing or minimized)
 
-  $("notice").hidden = BLOCK_SIZES.length > 0;
-
   function el(tag, cls, text) {
     const n = document.createElement(tag);
     if (cls) n.className = cls;
@@ -32,18 +30,26 @@
   });
 
   /* ---------- thumbnail check (runs in the viewer's browser, i.e. behind their filter) ---------- */
-  function checkThumb(v) {
+  function loadImg(url) {
     return new Promise(resolve => {
       const img = new Image();
       const timer = setTimeout(() => resolve(null), 12000);
-      img.onload = () => {
-        clearTimeout(timer);
-        const blocked = BLOCK_SIZES.some(([w, h]) => img.naturalWidth === w && img.naturalHeight === h);
-        resolve(blocked ? null : { id: v.id, title: v.title, src: img.src });
-      };
+      img.onload = () => { clearTimeout(timer); resolve(img); };
       img.onerror = () => { clearTimeout(timer); resolve(null); };
-      img.src = THUMB(v.id);
+      img.src = url;
     });
+  }
+
+  // A real video returns thumbnails of different sizes (480x360 and 320x180).
+  // A filter's block image is one fixed picture, so both URLs come back with the same size.
+  // Fail closed: any failure to load counts as blocked.
+  async function checkThumb(v) {
+    const hqUrl = THUMB(v.id);
+    const [hq, mq] = await Promise.all([loadImg(hqUrl), loadImg(hqUrl.replace("hqdefault", "mqdefault"))]);
+    if (!hq || !mq) return null;
+    if (hq.naturalWidth === mq.naturalWidth && hq.naturalHeight === mq.naturalHeight) return null;
+    if (BLOCK_SIZES.some(([w, h]) => hq.naturalWidth === w && hq.naturalHeight === h)) return null;
+    return { id: v.id, title: v.title, src: hq.src };
   }
 
   /* ---------- rendering ---------- */
