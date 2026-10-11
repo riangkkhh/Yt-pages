@@ -20,13 +20,22 @@
       </button>
     </form>
 
-    <button id="theme" class="icon-btn" type="button" aria-label="מעבר בין מצב כהה לבהיר">
-      <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.39 5.39 0 0 1-4.4 2.26 5.4 5.4 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1"/></svg>
-    </button>
+    <div class="tools">
+      <button id="admin" class="icon-btn" type="button" aria-label="הגדרות ניקוי אוטומטי">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6"/></svg>
+      </button>
+      <button id="theme" class="icon-btn" type="button" aria-label="מעבר בין מצב כהה לבהיר">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.39 5.39 0 0 1-4.4 2.26 5.4 5.4 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1"/></svg>
+      </button>
+    </div>
   </header>
 
   <main>
     <section id="home">
+      <div id="loader" class="loader" role="status" aria-live="polite">
+        <span class="spin" aria-hidden="true"></span>
+        <span id="loaderText">טוען סרטונים…</span>
+      </div>
       <p id="status" class="status" hidden></p>
       <div id="grid" class="grid" aria-live="polite"></div>
     </section>
@@ -54,6 +63,27 @@
     </section>
   </main>
 
+  <dialog id="adminDlg" class="dlg">
+    <form method="dialog">
+      <h2>ניקוי אוטומטי של סרטונים חסומים</h2>
+      <p>כשהאתר מוצא סרטון חסום, הוא יכול למחוק את הקישור שלו מהקובץ <bdi>videos.txt</bdi> בגיטהאב. לשם כך צריך מפתח גישה (טוקן), שנשמר רק בדפדפן הזה:</p>
+      <ol>
+        <li>בגיטהאב: תמונת הפרופיל ← <bdi>Settings</bdi> ← <bdi>Developer settings</bdi> ← <bdi>Personal access tokens</bdi> ← <bdi>Fine-grained tokens</bdi> ← <bdi>Generate new token</bdi>.</li>
+        <li>בחלק <bdi>Repository access</bdi> בוחרים <bdi>Only select repositories</bdi> ואז את הריפו של האתר.</li>
+        <li>בחלק <bdi>Permissions</bdi> ← <bdi>Repository permissions</bdi> ← <bdi>Contents</bdi> בוחרים <bdi>Read and write</bdi>.</li>
+        <li>יוצרים את הטוקן, מעתיקים ומדביקים כאן:</li>
+      </ol>
+      <input id="tokenInput" type="password" dir="ltr" placeholder="github_pat_…" autocomplete="off" spellcheck="false">
+      <p id="tokenState"></p>
+      <div class="dlg-actions">
+        <button id="tokenSave" class="btn" type="button">שמירה</button>
+        <button id="tokenClear" class="btn" type="button">הסרת הטוקן</button>
+        <button class="btn" value="close">סגירה</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" hidden></div>
   <div id="probe" class="probe" aria-hidden="true"></div>
 
   <script src="config.js"></script>

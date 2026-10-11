@@ -104,3 +104,27 @@ main { max-width: 1800px; margin: 0 auto; }
   #watch.mini .player { width: 220px; bottom: 12px; inset-inline-start: 12px; }
 }
 @media (prefers-reduced-motion: reduce) { .skel .thumb, .skel-line { animation: none; } }
+
+/* hidden players used to check whether a video is open */
+.probe { position: fixed; left: -2000px; top: 0; width: 320px; height: 180px; overflow: hidden; pointer-events: none; }
+
+/* ---------- loader, toast, settings dialog ---------- */
+.tools { justify-self: end; display: flex; gap: 4px; }
+.loader { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 18px 16px; color: var(--muted); }
+.loader[hidden] { display: none; }
+.spin { width: 22px; height: 22px; border: 3px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation-duration: 3s; } }
+
+.toast { position: fixed; bottom: 20px; inset-inline: 0; margin-inline: auto; width: fit-content; max-width: 90vw; z-index: 60;
+  background: var(--text); color: var(--bg); padding: 12px 18px; border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,.4); text-align: center; }
+.toast[hidden] { display: none; }
+
+.dlg { border: 0; border-radius: 16px; padding: 20px; max-width: 520px; width: calc(100% - 32px); background: var(--bg); color: var(--text); box-shadow: 0 10px 40px rgba(0,0,0,.4); }
+.dlg::backdrop { background: rgba(0,0,0,.6); }
+.dlg h2 { margin: 0 0 8px; font-size: 1.15rem; }
+.dlg p { margin: 8px 0; line-height: 1.6; }
+.dlg ol { margin: 8px 0; padding-inline-start: 22px; line-height: 1.7; }
+.dlg input { width: 100%; height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg2); color: var(--text); font-size: .95rem; }
+.dlg-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+#tokenState { color: var(--muted); font-size: .9rem; }
